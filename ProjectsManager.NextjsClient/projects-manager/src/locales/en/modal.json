@@ -1,0 +1,26 @@
+{
+  "createProject": {
+    "title": "Create New Project",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "Enter project name",
+    "customerCompany": "Customer Company",
+    "contractorCompany": "Contractor Company",
+    "companyPlaceholder": "Company name",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "selectDate": "Select date",
+    "cancel": "Cancel",
+    "create": "Create Project",
+    "success": "Project created successfully!",
+    "conflict": "Project name conflict detected. Please choose a different name.",
+    
+    "error": "Error creating project",
+    "projectNameRequired": "Please enter project name",
+    "projectNameMinError": "Name must be at least 3 characters",
+    "projectNameMaxError": "Name cannot be longer than {{max}} symbols",
+    "customerCompanyRequired": "Please enter customer company name",
+    "contractorCompanyRequired": "Please enter contractor company name",
+    "startDateRequired": "Please select start date",
+    "endDateBeforeStart": "End date cannot be earlier than start date"
+  }
+}

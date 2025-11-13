@@ -1,0 +1,12 @@
+{
+  "title": "Projects",
+  "createProject": "Create Project",
+  "projectDetails": "Details",
+  "startDate": "Start Date",
+  "endDate": "End Date",
+  "notFound": "No projects found",
+  "errorLoading": "Error loading projects",
+  "development": "Function in Development",
+  "customer": "Customer",
+  "viewDetails": "View project details"
+}

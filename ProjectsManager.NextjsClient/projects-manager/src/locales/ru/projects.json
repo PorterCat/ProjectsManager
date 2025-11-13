@@ -1,0 +1,12 @@
+{
+  "title": "Проекты",
+  "createProject": "Создать проект",
+  "projectDetails": "Подробнее",
+  "startDate": "Дата начала",
+  "endDate": "Дата окончания",
+  "notFound": "Проекты не найдены",
+  "errorLoading": "Ошибка при загрузке проектов",
+  "development": "Функция в разработке",
+  "customer": "Заказчик",
+  "viewDetails": "Просмотр деталей проекта"
+}

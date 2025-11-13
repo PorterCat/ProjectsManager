@@ -1,0 +1,50 @@
+{
+  "projects": {
+    "title": "Проекты",
+    "createProject": "Создать проект",
+    "projectDetails": "Подробнее",
+    "projectId": "ID",
+    "startDate": "Дата начала",
+    "endDate": "Дата окончания",
+    "notFound": "Проекты не найдены",
+    "errorLoading": "Ошибка при загрузке проектов",
+    "development": "Функция в разработке",
+    "customer": "Заказчик",
+    "viewDetails": "Просмотр деталей проекта"
+  },
+  "modal": {
+    "createProject": {
+      "title": "Создание нового проекта",
+      "projectName": "Название проекта",
+      "projectNamePlaceholder": "Введите название проекта",
+      "projectNameRequired": "Пожалуйста, введите название проекта",
+      "projectNameMinError": "Название должно содержать минимум 3 символа",
+      "customerCompany": "Компания-заказчик",
+      "customerCompanyRequired": "Пожалуйста, введите название компании-заказчика",
+      "contractorCompany": "Компания-исполнитель",
+      "contractorCompanyRequired": "Пожалуйста, введите название компании-исполнителя",
+      "companyPlaceholder": "Название компании",
+      "startDate": "Дата начала",
+      "startDateRequired": "Пожалуйста, выберите дату начала",
+      "endDate": "Дата окончания",
+      "selectDate": "Выберите дату",
+      "cancel": "Отмена",
+      "create": "Создать проект",
+      "success": "Проект успешно создан!",
+      "conflict": "Обнаружен конфликт названий проектов. Пожалуйста, выберите другое название.",
+      "error": "Ошибка при создании проекта"
+    }
+  },
+  "layout": {
+    "menu": "Меню",
+    "projects": "Проекты",
+    "employees": "Работники",
+    "systemName": "Система управления проектами"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "edit": "Редактировать"
+  }
+}

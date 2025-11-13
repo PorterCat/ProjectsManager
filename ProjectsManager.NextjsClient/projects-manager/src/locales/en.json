@@ -1,0 +1,50 @@
+{
+  "projects": {
+    "title": "Projects",
+    "createProject": "Create Project",
+    "projectDetails": "Details",
+    "projectId": "ID",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "notFound": "No projects found",
+    "errorLoading": "Error loading projects",
+    "development": "Function in Development",
+    "customer": "Customer",
+    "viewDetails": "View project details"
+  },
+  "modal": {
+    "createProject": {
+      "title": "Create New Project",
+      "projectName": "Project Name",
+      "projectNamePlaceholder": "Enter project name",
+      "projectNameRequired": "Please enter project name",
+      "projectNameMinError": "Name must be at least 3 characters",
+      "customerCompany": "Customer Company",
+      "customerCompanyRequired": "Please enter customer company name",
+      "contractorCompany": "Contractor Company",
+      "contractorCompanyRequired": "Please enter contractor company name",
+      "companyPlaceholder": "Company name",
+      "startDate": "Start Date",
+      "startDateRequired": "Please select start date",
+      "endDate": "End Date",
+      "selectDate": "Select date",
+      "cancel": "Cancel",
+      "create": "Create Project",
+      "success": "Project created successfully!",
+      "conflict": "Project name conflict detected. Please choose a different name.",
+      "error": "Error creating project"
+    }
+  },
+  "layout": {
+    "menu": "Menu",
+    "projects": "Projects",
+    "employees": "Employees",
+    "systemName": "Project Management System"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit"
+  }
+}
