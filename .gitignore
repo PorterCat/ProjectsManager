@@ -484,3 +484,5 @@ $RECYCLE.BIN/
 *.swp
 
 /ProjectsManager.Api/ProjectsManagerDb.db
+/ProjectsManager.Api/ProjectsManagerDb.db-shm
+/ProjectsManager.Api/ProjectsManagerDb.db-wal

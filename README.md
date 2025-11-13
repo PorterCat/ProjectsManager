@@ -11,8 +11,10 @@
 ```bash
 dotnet ef database update -s ProjectsManager.Api -p ProjectsManager.DataAccess
 
-dotnet run
+dotnet run --project .\ProjectsManager.Api\ProjectsManager.Api.csproj --launch-profile https
 ```
+
+` swagger: https://localhost:7093/swagger/index.html `
 
 ### Тесты
 ```
@@ -26,6 +28,8 @@ dotnet test
 npm install
 npm run dev # npm run build
 ```
+
+` http://localhost:3000 `
 
 ## Используемые сторонние библиотеки
 ### Фронтенд
