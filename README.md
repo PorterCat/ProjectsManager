@@ -1,7 +1,7 @@
 # Система менеджмента проектов
 
 ## Предварительные требования
-- .NET 10
+- .NET 10 / C# 14
 - Node.js 11.6.0 (пакетный менеджер npm)
 - Next.js 16.0.3
 
@@ -40,3 +40,7 @@ npm run dev # npm run build
 ### Бэкенд
 - Moq - библиотека для мокинга зависимостей в тестах
 - CSharpFunctionalExtensions - реализации функциональных подходов (Result/Either)
+- NSwag - тулчейн для взамодействия OpenAPI и Swagger
+
+А также:
+EntityFramework Core, провайдер для базы SQLite, ASP.NET Identity

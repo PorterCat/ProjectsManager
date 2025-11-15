@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button, InputNumber, Space, Typography, message } from 'antd';
-import { Project } from '@/app/Models/Project';
+import { useEffect, useState, useCallback } from 'react';
+import { Space, Typography, Button, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Project, ProjectFilterQuery } from '@/app/Models/Project';
 import { projectService } from '@/app/Services/projectService';
-import { LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { ProjectList } from '@/app/Components/Projects/ProjectList';
+import { ProjectFilters } from '@/app/Components/Projects/ProjectFilters';
 import { CreateProjectModal } from '@/app/Components/Projects/CreateProjectModal';
-import { useTranslation } from 'react-i18next';
+import { ProjectDetailsModal } from '@/app/Components/Projects/ProjectDetailsModal';
+import { Pagination } from '@/app/Components/Common/Pagination';
 import { useRouter, useSearchParams } from 'next/navigation';
+import styles from './projects.module.css';
 
 const { Title } = Typography;
 
@@ -17,6 +20,9 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [filters, setFilters] = useState<ProjectFilterQuery>({});
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,123 +33,106 @@ export default function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(urlPage);
   const [pageSize] = useState(urlPageSize);
 
-  const { t } = useTranslation('projects');
-
-  const loadProjects = async (pageNum: number, pageSize: number) => {
+  const loadProjects = useCallback(async (pageNum: number, filterQuery: ProjectFilterQuery = {}) => {
     try {
       setLoading(true);
-      const data = await projectService.getProjectsByPage(pageNum, pageSize);
-      setProjects(data.items);
-      setTotalPages(data.totalPages);
+      const data = await projectService.getProjectsByPage(pageNum, pageSize, filterQuery);
       
-      if (pageNum > data.totalPages && data.totalPages > 0) {
-        const correctedPage = data.totalPages;
-        setCurrentPage(correctedPage);
-        updateUrl(correctedPage);
-      }
+      setProjects(Array.isArray(data?.items) ? data.items : []);
+      setTotalPages(data?.totalPages || 1);
+      
+      const params = new URLSearchParams();
+      params.set('pageNum', pageNum.toString());
+      params.set('pageSize', pageSize.toString());
+      router.push(`/projects?${params.toString()}`, { scroll: false });
     } catch (error) {
-      message.error(t('projects.errorLoading'));
-      console.error('Error loading projects:', error);
+      message.error('Ошибка загрузки проектов');
+      console.error('Error while loading project:', error);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const updateUrl = (pageNum: number) => {
-    const params = new URLSearchParams();
-    params.set('pageNum', pageNum.toString());
-    params.set('pageSize', pageSize.toString());
-    router.push(`/projects?${params.toString()}`, { scroll: false });
-  };
+  }, [pageSize, router]);
 
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      const correctedPage = totalPages;
-      setCurrentPage(correctedPage);
-      updateUrl(correctedPage);
-      return;
-    }
-    
-    loadProjects(currentPage, pageSize);
-    updateUrl(currentPage);
-  }, [currentPage, pageSize, totalPages]);
+    loadProjects(currentPage, filters);
+  }, [currentPage, filters, loadProjects]);
 
-  const handleProjectCreated = () => {
-    setCreateModalOpen(false);
+  const handleFiltersChange = (newFilters: ProjectFilterQuery) => {
+    setFilters(newFilters);
     setCurrentPage(1);
-    updateUrl(1);
   };
 
-  const handlePageChange = (value: number | null) => {
-    if (value && value >= 1 && value <= totalPages) {
-      setCurrentPage(value);
-    }
+  const handleProjectCreated = async () => {
+    setCreateModalOpen(false);
+    message.success('Проект успешно создан');
+    loadProjects(1, filters);
   };
 
-  const prevPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
-  const nextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project);
+    setDetailsModalOpen(true);
+  };
+
+  const handleProjectUpdated = () => {
+    loadProjects(currentPage, filters);
+  };
+
+  const handleProjectDeleted = () => {
+    setDetailsModalOpen(false);
+    loadProjects(currentPage, filters);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
-    <div className="projects">
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div className="projects-header">
-          <Title level={2}>{t('title')}</Title>
+    <div className={styles.container}>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <div className={styles.header}>
+          <Title level={2}>Проекты</Title>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
             onClick={() => setCreateModalOpen(true)}
           >
-            {t('createProject')}
+            Создать проект
           </Button>
         </div>
+
+        <ProjectFilters 
+          onFiltersChange={handleFiltersChange}
+          loading={loading}
+        />
 
         <ProjectList 
           projects={projects}
           loading={loading}
-          onViewDetails={(project) => console.log('Project details:', project)}
+          onViewDetails={handleViewDetails}
         />
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Button 
-            icon={<LeftOutlined />}
-            onClick={prevPage}
-            disabled={currentPage === 1}
+        {Array.isArray(projects) && projects.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
           />
-
-          <Space.Compact>
-            <InputNumber
-              min={1}
-              max={totalPages}
-              size="small"
-              value={currentPage}
-              onChange={handlePageChange}
-              controls={false}
-              style={{ width: 60 }}
-            />
-            <span style={{ 
-              padding: '0 8px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              background: '#fafafa',
-              border: '1px solid #d9d9d9',
-              borderLeft: 'none'
-            }}>
-              / {totalPages}
-            </span>
-          </Space.Compact>
-
-          <Button 
-            icon={<RightOutlined />}
-            onClick={nextPage}
-            disabled={currentPage === totalPages}
-          />
-        </div>
+        )}
       </Space>
 
       <CreateProjectModal 
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         onSuccess={handleProjectCreated}
+      />
+
+      <ProjectDetailsModal
+        open={detailsModalOpen}
+        project={selectedProject}
+        onCancel={() => setDetailsModalOpen(false)}
+        onSuccess={handleProjectUpdated}
+        onDelete={handleProjectDeleted}
       />
     </div>
   );

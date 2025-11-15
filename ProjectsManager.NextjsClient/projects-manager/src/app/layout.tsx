@@ -6,10 +6,8 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { Layout, Menu } from 'antd';
 import { ProjectOutlined, TeamOutlined } from '@ant-design/icons';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { MenuProps } from 'antd';
-import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './Components/LanguageSwitcher';
-import './i18n';
 
 const { Header, Sider, Content } = Layout;
 
@@ -18,23 +16,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { t } = useTranslation('layout');
+  const pathname = usePathname();
 
   const menuItems: MenuProps['items'] = [
     {
       key: '/projects',
       icon: <ProjectOutlined />,
-      label: <Link href="/projects">{t('projects')}</Link>,
+      label: <Link href="/projects">Проекты</Link>,
     },
     {
       key: '/employees',
       icon: <TeamOutlined />,
-      label: <Link href="/employees">{t('employees')}</Link>,
+      label: <Link href="/employees">Сотрудники</Link>,
     },
   ];
 
   return (
-    <html lang="en">
+    <html lang="ru">
       <body>
         <AntdRegistry>
           <Layout style={{ minHeight: '100vh' }}>
@@ -53,12 +51,12 @@ export default function RootLayout({
                 color: 'white',
                 fontWeight: 'bold'
               }}>
-                {t('menu')}  
+                Меню
               </div>
               <Menu
                 theme="dark"
                 mode="inline"
-                defaultSelectedKeys={['/projects']}
+                selectedKeys={[pathname]}
                 items={menuItems}
               />
             </Sider>
@@ -72,9 +70,8 @@ export default function RootLayout({
                 alignItems: 'center'
               }}>
                 <h1 style={{ margin: 0, lineHeight: '64px' }}>
-                  {t('systemName')}
+                  Система управления проектами
                 </h1>
-                <LanguageSwitcher />
               </Header>
               <Content style={{ margin: '24px 16px 0', overflow: 'initial' }}>
                 <div style={{ 

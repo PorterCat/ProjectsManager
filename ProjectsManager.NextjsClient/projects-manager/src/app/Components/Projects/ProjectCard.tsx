@@ -2,7 +2,6 @@
 
 import { Card, Button, Space, Typography } from 'antd';
 import { Project } from '@/app/Models/Project';
-import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
@@ -12,8 +11,6 @@ interface ProjectCardProps {
 }
 
 export const ProjectCard = ({ project, onViewDetails }: ProjectCardProps) => {
-  const { t } = useTranslation('projects');
-
   return (
     <Card
       title={project.title}
@@ -25,7 +22,7 @@ export const ProjectCard = ({ project, onViewDetails }: ProjectCardProps) => {
           key="view"
           onClick={() => onViewDetails(project)}
         >
-          {t('projectDetails')}
+          Детали проекта
         </Button>,
       ]}
     >
@@ -37,18 +34,18 @@ export const ProjectCard = ({ project, onViewDetails }: ProjectCardProps) => {
           </Text>
         </div>
         <div>
-          <Text strong>{t('startDate')}: </Text>
+          <Text strong>Дата начала: </Text>
           <Text>{project.startDate.toString()}</Text>
         </div>
         {project.endDate && (
           <div>
-            <Text strong>{t('endDate')}: </Text>
+            <Text strong>Дата окончания: </Text>
             <Text>{project.endDate.toString()}</Text>
           </div>
         )}
         {project.customerCompanyName && (
           <div>
-            <Text strong>{t('customer')}: </Text>
+            <Text strong>Заказчик: </Text>
             <Text>{project.customerCompanyName}</Text>
           </div>
         )}

@@ -1,6 +1,7 @@
 ﻿using Moq;
 using ProjectsManager.Business;
 using ProjectsManager.Core.Abstractions;
+using ProjectsManager.Core.Contracts;
 using ProjectsManager.Core.Models;
 
 namespace ProjectsManager.Tests;
@@ -48,7 +49,15 @@ public class ProjectsServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.AddProject(project, leaderId: null);
+        var result = await _service.CreateProject(new CreateProjectRequest(
+            Title: project.Title,
+            StartDate: project.StartDate,
+            EndDate: project.EndDate,
+            Priority: project.Priority,
+            CustomerCompanyName: project.CustomerCompanyName,
+            ContractorCompanyName: project.ContractorCompanyName,
+            LeaderId: project.LeaderId
+        ));
 
         // Assert
         Assert.That(result.IsSuccess, "Expected service to return success");

@@ -1,5 +1,4 @@
 using CSharpFunctionalExtensions;
-using ProjectsManager.Core.Contracts;
 
 namespace ProjectsManager.Core.Models;
 
@@ -12,24 +11,13 @@ public record Project
     public int Priority { get; private set; }
     public DateOnly StartDate { get; private set; }
     public DateOnly? EndDate { get; private set; }
-    public Guid? LeaderId { get; private set; }
-
-    public IReadOnlyCollection<Guid> Employees => _employees;
-
-    [IgnorePatch]
-    public IReadOnlyCollection<Guid> EmployeesToAdd => _employeesToAdd.AsReadOnly();
-
-    [IgnorePatch]
-    public IReadOnlyCollection<Guid> EmployeesToRemove => _employeesToRemove.AsReadOnly();
-
-    private readonly HashSet<Guid> _employees = [];
-    private readonly List<Guid> _employeesToAdd = [];
-    private readonly List<Guid> _employeesToRemove = [];
+    public Guid? LeaderId { get; set; }
+    public ICollection<Guid> EmployeeIds { get; init; } = [];
 
     private Project(Guid id, string title, string customerCompanyName,
         string contractorCompanyName, int priority, DateOnly startDate,
         DateOnly? endDate = null, Guid? leaderId = null,
-        IEnumerable<Guid>? employees = null)
+        IEnumerable<Guid>? employeeIds = null)
     {
         Id = id;
         Title = title;
@@ -40,14 +28,13 @@ public record Project
         EndDate = endDate;
         LeaderId = leaderId;
 
-        if (employees != null)
-            _employees = employees.ToHashSet();
+        if (employeeIds != null)
+            EmployeeIds = employeeIds.ToHashSet();
     }
 
     public static Result<Project> Create(string title, string customerCompanyName,
         string contractorCompanyName, int priority, DateOnly startDate,
-        DateOnly? endDate = null, Guid? leaderId = null,
-        IEnumerable<Guid>? employeeIds = null)
+        DateOnly? endDate = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             return Result.Failure<Project>("Title cannot be empty");
@@ -60,7 +47,7 @@ public record Project
 
         return Result.Success(new Project(Guid.NewGuid(), title.Trim(),
             customerCompanyName.Trim(), contractorCompanyName.Trim(),
-            priority, startDate, endDate, leaderId, employeeIds));
+            priority, startDate, endDate));
     }
 
     public static Project Reconstruct(Guid id, string title, string customerCompanyName,
@@ -73,24 +60,18 @@ public record Project
 
     public Result AssignEmployee(Guid employeeId)
     {
-        if (!_employees.Add(employeeId))
+        if (EmployeeIds.Contains(employeeId))
             return Result.Failure($"Employee {employeeId} is already assigned to project");
-
-        _employees.Add(employeeId);
-        _employeesToAdd.Add(employeeId);
-        _employeesToRemove.Remove(employeeId);
-
+        EmployeeIds.Add(employeeId);
         return Result.Success();
     }
 
     public Result RemoveEmployee(Guid employeeId)
     {
-        if (!_employees.Contains(employeeId))
+        if (!EmployeeIds.Contains(employeeId))
             return Result.Failure($"Employee {employeeId} is not assigned to project");
 
-        _employees.Remove(employeeId);
-        _employeesToRemove.Add(employeeId);
-        _employeesToAdd.Remove(employeeId);
+        EmployeeIds.Remove(employeeId);
 
         if (LeaderId == employeeId)
             LeaderId = null;
@@ -103,63 +84,42 @@ public record Project
         if (LeaderId == leaderId)
             return Result.Failure($"Employee {leaderId} is already the project leader");
 
-        AssignEmployee(leaderId);
+        if (!EmployeeIds.Contains(leaderId))
+        {
+            var assignResult = AssignEmployee(leaderId);
+            if (assignResult.IsFailure)
+                return Result.Failure(assignResult.Error);
+        }
 
         LeaderId = leaderId;
         return Result.Success();
     }
 
-    public void ClearEmployeeBuffers()
+    public Result UpdateBasicInfo(string title, string customerCompanyName,
+        string contractorCompanyName, int priority)
     {
-        _employeesToAdd.Clear();
-        _employeesToRemove.Clear();
+        if (string.IsNullOrWhiteSpace(title))
+            return Result.Failure("Title cannot be empty");
+        if (string.IsNullOrWhiteSpace(customerCompanyName))
+            return Result.Failure("CustomerCompanyName cannot be empty");
+        if (string.IsNullOrWhiteSpace(contractorCompanyName))
+            return Result.Failure("ContractorCompanyName cannot be empty");
+
+        Title = title.Trim();
+        CustomerCompanyName = customerCompanyName.Trim();
+        ContractorCompanyName = contractorCompanyName.Trim();
+        Priority = priority;
+
+        return Result.Success();
     }
 
-    public bool HasEmployeeChanges => _employeesToAdd.Count > 0 || _employeesToRemove.Count > 0;
-
-    public Result ApplyPatch(PatchProjectRequest req)
+    public Result UpdateDates(DateOnly startDate, DateOnly? endDate)
     {
-        if (req.Title is not null)
-        {
-            if (string.IsNullOrWhiteSpace(req.Title))
-                return Result.Failure("Title cannot be empty");
-            Title = req.Title.Trim();
-        }
+        if (endDate.HasValue && startDate > endDate.Value)
+            return Result.Failure("StartDate must be before EndDate");
 
-        if (req.CustomerCompanyName is not null)
-        {
-            if (string.IsNullOrWhiteSpace(req.CustomerCompanyName))
-                return Result.Failure("CustomerCompanyName cannot be empty");
-            CustomerCompanyName = req.CustomerCompanyName.Trim();
-        }
-
-        if (req.ContractorCompanyName is not null)
-        {
-            if (string.IsNullOrWhiteSpace(req.ContractorCompanyName))
-                return Result.Failure("ContractorCompanyName cannot be empty");
-            ContractorCompanyName = req.ContractorCompanyName.Trim();
-        }
-
-        if (req.Priority is not null) Priority = req.Priority.Value;
-
-        if (req.StartDate is not null)
-        {
-            if (req.EndDate.HasValue && req.StartDate.Value > req.EndDate.Value)
-                return Result.Failure("StartDate must be before EndDate");
-            StartDate = req.StartDate.Value;
-        }
-
-        if (req.EndDate is not null)
-        {
-            if (req.EndDate.Value < StartDate)
-                return Result.Failure("EndDate must be after StartDate");
-            EndDate = req.EndDate;
-        }
-
-        if (req.RemoveLeader == true)
-            LeaderId = null;
-        else if (req.LeaderId is not null)
-            return AssignLeader(req.LeaderId.Value);
+        StartDate = startDate;
+        EndDate = endDate;
 
         return Result.Success();
     }

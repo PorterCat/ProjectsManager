@@ -1,11 +1,8 @@
 'use client';
 
-import { List, Typography, Empty } from 'antd';
+import { Row, Col, Spin, Empty } from 'antd';
 import { Project } from '@/app/Models/Project';
 import { ProjectCard } from './ProjectCard';
-import { useTranslation } from 'react-i18next';
-
-const { Text } = Typography;
 
 interface ProjectListProps {
   projects: Project[];
@@ -14,37 +11,33 @@ interface ProjectListProps {
 }
 
 export const ProjectList = ({ projects, loading, onViewDetails }: ProjectListProps) => {
-  const { t } = useTranslation('projects');
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <Empty 
+        description="Проекты не найдены" 
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+      />
+    );
+  }
 
   return (
-    <List
-      loading={loading}
-      grid={{
-        gutter: 16,
-        xs: 1,
-        sm: 2,
-        md: 2,
-        lg: 3,
-        xl: 3,
-        xxl: 4,
-      }}
-      dataSource={projects}
-      renderItem={(project) => (
-        <List.Item>
+    <Row gutter={[16, 16]}>
+      {projects.map(project => (
+        <Col key={project.id} xs={24} sm={12} lg={8}>
           <ProjectCard 
             project={project} 
             onViewDetails={onViewDetails}
           />
-        </List.Item>
-      )}
-      locale={{ 
-        emptyText: (
-          <Empty 
-            description={t('notFound')} 
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
-        ) 
-      }}
-    />
+        </Col>
+      ))}
+    </Row>
   );
 };

@@ -1,17 +1,16 @@
 'use client';
 
-import { Modal, Form, Input, DatePicker, Flex, Button, message, Steps, Upload, Select, Card, Tag } from 'antd';
+import { Modal, Form, Input, DatePicker, Flex, Button, message, Steps, Upload, Card, Select } from 'antd';
 import { CreateProjectRequest } from '@/app/Models/Project';
 import { projectService } from "@/app/Services/projectService";
 import { employeeService } from "@/app/Services/employeeService";
 import dayjs from 'dayjs';
 import { useState, useEffect, JSX } from 'react';
-import { useTranslation } from 'react-i18next';
-import { InboxOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
+import { InboxOutlined } from '@ant-design/icons';
 import { Employee } from '@/app/Models/Employee';
 import { FormInstance } from 'antd/es/form';
-import { TFunction } from 'i18next';
 import { RcFile, UploadFile } from 'antd/es/upload';
+import { LeaderSelector, EmployeesSelector } from './TeamSelector';
 
 const { Dragger } = Upload;
 const { Option } = Select;
@@ -36,205 +35,122 @@ export interface ProjectFormData {
 
 interface StepProps {
   form: FormInstance;
-  t: TFunction<'modal'>;
 }
 
-interface EmployeeStepProps extends StepProps {
-  employees: Employee[];
-  loading: boolean;
-  onSearch: (searchText?: string) => void;
-}
+const BasicInfoStep = ({ form }: StepProps) => {
+  const validateEndDate = (_: any, value: dayjs.Dayjs) => {
+    const startDate = form.getFieldValue('startDate');
+    
+    if (!value || !startDate) {
+      return Promise.resolve();
+    }
+    
+    if (value.isBefore(startDate, 'day')) {
+      return Promise.reject(new Error('Дата окончания не может быть раньше даты начала'));
+    }
+    
+    return Promise.resolve();
+  };
 
-const BasicInfoStep = ({ form, t }: StepProps) => (
-  <Flex gap="middle" vertical>
-    <Form.Item
-      label={t('createProject.projectName')}
-      name="title"
-      rules={[
-        { required: true, message: t('createProject.projectNameRequired') },
-        { min: 3, message: t('createProject.projectNameMinError') }
-      ]}
-    >
-      <Input 
-        placeholder={t('createProject.projectNamePlaceholder')} 
-        size="large"
-      />
-    </Form.Item>
-
-    <Flex gap="middle">
+  return (
+    <Flex gap="middle" vertical>
       <Form.Item
-        label={t('createProject.startDate')}
-        name="startDate"
-        rules={[{ required: true, message: t('createProject.startDateRequired') }]}
-        style={{ flex: 1 }}
+        label="Название проекта"
+        name="title"
+        rules={[
+          { required: true, message: 'Введите название проекта' },
+          { min: 3, message: 'Название должно содержать минимум 3 символа' }
+        ]}
       >
-        <DatePicker 
-          format="DD.MM.YYYY"
-          placeholder={t('createProject.selectDate')}
-          style={{ width: '100%' }}
+        <Input 
+          placeholder="Введите название проекта" 
           size="large"
         />
       </Form.Item>
 
+      <Flex gap="middle">
+        <Form.Item
+          label="Дата начала"
+          name="startDate"
+          rules={[{ required: true, message: 'Укажите дату начала' }]}
+          style={{ flex: 1 }}
+        >
+          <DatePicker 
+            format="DD.MM.YYYY"
+            placeholder="Выберите дату"
+            style={{ width: '100%' }}
+            size="large"
+            onChange={() => {
+              const endDate = form.getFieldValue('endDate');
+              if (endDate) {
+                form.validateFields(['endDate']);
+              }
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Дата окончания"
+          name="endDate"
+          style={{ flex: 1 }}
+          rules={[
+            {
+              validator: validateEndDate
+            }
+          ]}
+          dependencies={['startDate']}
+        >
+          <DatePicker 
+            format="DD.MM.YYYY"
+            placeholder="Выберите дату"
+            style={{ width: '100%' }}
+            size="large"
+          />
+        </Form.Item>
+      </Flex>
+
       <Form.Item
-        label={t('createProject.endDate')}
-        name="endDate"
-        style={{ flex: 1 }}
+        label="Приоритет"
+        name="priority"
+        rules={[{ required: true, message: 'Выберите приоритет' }]}
       >
-        <DatePicker 
-          format="DD.MM.YYYY"
-          placeholder={t('createProject.selectDate')}
-          style={{ width: '100%' }}
-          size="large"
-        />
+        <Select size="large" placeholder="Выберите приоритет">
+          <Option value={1}>Низкий</Option>
+          <Option value={2}>Средний</Option>
+          <Option value={3}>Высокий</Option>
+        </Select>
       </Form.Item>
     </Flex>
+  );
+};
 
-    <Form.Item
-      label={t('createProject.priority')}
-      name="priority"
-      rules={[{ required: true, message: t('createProject.priorityRequired') }]}
-    >
-      <Select size="large" placeholder={t('createProject.selectPriority')}>
-        <Option value={1}>{t('createProject.priorityLow')}</Option>
-        <Option value={2}>{t('createProject.priorityMedium')}</Option>
-        <Option value={3}>{t('createProject.priorityHigh')}</Option>
-      </Select>
-    </Form.Item>
-  </Flex>
-);
-
-const CompaniesStep = ({ form, t }: StepProps) => (
+const CompaniesStep = ({ form }: StepProps) => (
   <Flex gap="middle" vertical>
     <Form.Item
-      label={t('createProject.customerCompany')}
+      label="Компания заказчика"
       name="customerCompanyName"
-      rules={[{ required: true, message: t('createProject.customerCompanyRequired') }]}
+      rules={[{ required: true, message: 'Введите компанию заказчика' }]}
     >
       <Input 
-        placeholder={t('createProject.companyPlaceholder')} 
+        placeholder="Введите название компании" 
         size="large"
       />
     </Form.Item>
 
     <Form.Item
-      label={t('createProject.contractorCompany')}
+      label="Компания исполнителя"
       name="contractorCompanyName"
-      rules={[{ required: true, message: t('createProject.contractorCompanyRequired') }]}
+      rules={[{ required: true, message: 'Введите компанию исполнителя' }]}
     >
       <Input 
-        placeholder={t('createProject.companyPlaceholder')} 
+        placeholder="Введите название компании" 
         size="large"
       />
     </Form.Item>
   </Flex>
 );
 
-const LeaderStep = ({ form, t, employees, loading, onSearch }: EmployeeStepProps) => (
-  <Card>
-    <Form.Item
-      label={t('createProject.selectLeader')}
-      name="leaderId"
-    >
-      <Select
-        showSearch
-        placeholder={t('createProject.searchLeader')}
-        size="large"
-        loading={loading}
-        onSearch={onSearch}
-        filterOption={false}
-        optionFilterProp="children"
-        suffixIcon={<UserOutlined />}
-        allowClear
-        notFoundContent={t('createProject.noEmployeesFound')}
-        optionLabelProp="label"
-        labelInValue={false}
-      >
-        <Option value={undefined} key="no-leader" label={t('createProject.noLeader')}>
-          {t('createProject.noLeader')}
-        </Option>
-        {Array.isArray(employees) && employees.length > 0 ? (
-          employees.map(employee => {
-            const fullName = `${employee.firstname} ${employee.lastname}`;
-            return (
-              <Option 
-                key={employee.id.toString()}
-                value={employee.id.toString()}
-                label={fullName}
-              >
-                <div>
-                  <div><strong>{fullName}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    {employee.email}
-                  </div>
-                </div>
-              </Option>
-            );
-          })
-        ) : (
-          !loading && <Option disabled key="no-data">{t('createProject.noEmployeesFound')}</Option>
-        )}
-      </Select>
-    </Form.Item>
-  </Card>
-);
-
-const PerformersStep = ({ form, t, employees, loading, onSearch }: EmployeeStepProps) => (
-  <Card>
-    <Form.Item
-      label={t('createProject.selectPerformers')}
-      name="performerIds"
-    >
-      <Select
-        mode="multiple"
-        showSearch
-        placeholder={t('createProject.searchPerformers')}
-        size="large"
-        loading={loading}
-        onSearch={onSearch}
-        filterOption={false}
-        optionFilterProp="children"
-        suffixIcon={<TeamOutlined />}
-        notFoundContent={t('createProject.noEmployeesFound')}
-        optionLabelProp="label"
-        labelInValue={false}
-        tagRender={(props) => (
-          <Tag
-            closable={props.closable}
-            onClose={props.onClose}
-            style={{ margin: '2px 4px' }}
-          >
-            {props.label}
-          </Tag>
-        )}
-      >
-        {Array.isArray(employees) && employees.length > 0 ? (
-          employees.map(employee => {
-            const fullName = `${employee.firstname} ${employee.lastname}`;
-            return (
-              <Option 
-                key={employee.id.toString()}
-                value={employee.id.toString()}
-                label={fullName}
-              >
-                <div>
-                  <div><strong>{fullName}</strong></div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    {employee.email}
-                  </div>
-                </div>
-              </Option>
-            );
-          })
-        ) : (
-          !loading && <Option disabled key="no-data">{t('createProject.noEmployeesFound')}</Option>
-        )}
-      </Select>
-    </Form.Item>
-  </Card>
-);
-
-const DocumentsStep = ({ form, t }: StepProps) => {
+const DocumentsStep = ({ form }: StepProps) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   const handleBeforeUpload = (file: RcFile) => {
@@ -271,7 +187,7 @@ const DocumentsStep = ({ form, t }: StepProps) => {
   };
 
   return (
-    <Card>
+    <Card title="Документы">
       <Form.Item name="documents">
         <Dragger
           name="files"
@@ -285,10 +201,10 @@ const DocumentsStep = ({ form, t }: StepProps) => {
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">
-            {t('createProject.dragAndDrop')}
+            Перетащите файлы для загрузки
           </p>
           <p className="ant-upload-hint">
-            {t('createProject.supportedFormats')}
+            Поддерживаемые форматы: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG
           </p>
         </Dragger>
       </Form.Item>
@@ -297,7 +213,6 @@ const DocumentsStep = ({ form, t }: StepProps) => {
 };
 
 interface WizardStep {
-  title: string;
   content: JSX.Element;
 }
 
@@ -308,7 +223,6 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<ProjectFormData>>({});
-  const { t } = useTranslation('modal');
 
   useEffect(() => {
     if (open) {
@@ -327,10 +241,10 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
   const loadEmployees = async (searchText?: string) => {
     try {
       setSearchLoading(true);
-      const employeeData = await employeeService.searchEmployees(searchText || '');
+      const employeeData = await employeeService.getAllEmployees(searchText);
       setEmployees(Array.isArray(employeeData) ? employeeData : []);
     } catch (error) {
-      console.error('Error loading employees:', error);
+      console.error('Error while loading employees:', error);
       setEmployees([]);
     } finally {
       setSearchLoading(false);
@@ -343,101 +257,97 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
     }
   }, [open, currentStep]);
 
-  const steps: WizardStep[] = [
-    {
-      title: t('createProject.steps.basicInfo'),
-      content: <BasicInfoStep form={form} t={t} />
-    },
-    {
-      title: t('createProject.steps.companies'),
-      content: <CompaniesStep form={form} t={t} />
-    },
-    {
-      title: t('createProject.steps.leader'),
-      content: <LeaderStep 
-        form={form} 
-        t={t} 
-        employees={employees}
-        loading={searchLoading}
-        onSearch={loadEmployees}
-      />
-    },
-    {
-      title: t('createProject.steps.performers'),
-      content: <PerformersStep 
-        form={form} 
-        t={t} 
-        employees={employees}
-        loading={searchLoading}
-        onSearch={loadEmployees}
-      />
-    },
-    {
-      title: t('createProject.steps.documents'),
-      content: <DocumentsStep form={form} t={t} />
-    }
-  ];
-
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      
-      const finalValues = await form.validateFields();
-      const allValues = { ...formData, ...finalValues } as ProjectFormData;
-      
-      console.log('All form values:', allValues);
-
-      if (!allValues.startDate) {
-        message.error(t('createProject.startDateRequired'));
-        return;
-      }
-
-      const projectDataForBackend = {
-        Title: allValues.title,
-        StartDate: allValues.startDate.format('YYYY-MM-DD'),
-        EndDate: allValues.endDate ? allValues.endDate.format('YYYY-MM-DD') : null,
-        Priority: allValues.priority || 1,
-        CustomerCompanyName: allValues.customerCompanyName,
-        ContractorCompanyName: allValues.contractorCompanyName,
-        LeaderId: allValues.leaderId || null
-      };
-      
-      console.log('Sending to backend:', projectDataForBackend);
-      
-      await projectService.createProject(projectDataForBackend);
-      
-      message.success(t('createProject.success'));
-      form.resetFields();
-      setCurrentStep(0);
-      setFormData({});
-      onSuccess();
-      
-    } catch (error: any) {
-      console.error('Full error details:', error);
-      
-      if (error.response?.data) {
-        const errorData = error.response.data;
-        console.error('Error data structure:', errorData);
-        
-        if (errorData.errors) {
-          const errorMessages = Object.values(errorData.errors).flat().join(', ');
-          message.error(`${t('createProject.error')}: ${errorMessages}`);
-        } else if (errorData.title) {
-          message.error(`${t('createProject.error')}: ${errorData.title}`);
-        } else if (typeof errorData === 'string') {
-          message.error(`${t('createProject.error')}: ${errorData}`);
-        } else {
-          message.error(t('createProject.error'));
-        }
-      } else if (error.errorFields) {
-        message.warning(t('createProject.validationError'));
-      } else {
-        message.error(t('createProject.error'));
-      }
-    } finally {
-      setLoading(false);
-    }
+  const transformFormDataForBackend = (formData: ProjectFormData): CreateProjectRequest => {
+  return {
+    title: formData.title,
+    startDate: formData.startDate.format('YYYY-MM-DD'), 
+    endDate: formData.endDate ? formData.endDate.format('YYYY-MM-DD') : undefined,
+    priority: formData.priority || 1,
+    customerCompanyName: formData.customerCompanyName,
+    contractorCompanyName: formData.contractorCompanyName,
+    leaderId: formData.leaderId || undefined,
+    employeeIds: formData.performerIds || undefined
   };
+};
+
+  const steps: WizardStep[] = [
+  {
+    content: <BasicInfoStep form={form} />
+  },
+  {
+    content: <CompaniesStep form={form} />
+  },
+  {
+    content: <EmployeesSelector 
+      employees={employees}
+      loading={searchLoading}
+      onSearch={loadEmployees}
+    />
+  },
+  {
+    content: <LeaderSelector 
+      employees={employees}
+      loading={searchLoading}
+      onSearch={loadEmployees}
+    />
+  },
+  {
+    content: <DocumentsStep form={form} />
+  }
+];
+  const handleSubmit = async () => {
+  try {
+    setLoading(true);
+    
+    const finalValues = await form.validateFields();
+    const allValues = { ...formData, ...finalValues } as ProjectFormData;
+
+    if (!allValues.startDate) {
+      message.error('Укажите дату начала');
+      return;
+    }
+
+    if (allValues.endDate && allValues.endDate.isBefore(allValues.startDate, 'day')) {
+      message.error('Дата окончания не может быть раньше даты начала');
+      return;
+    }
+
+    const projectDataForBackend = transformFormDataForBackend(allValues);
+    
+    await projectService.createProject(projectDataForBackend);
+    
+    message.success('Проект успешно создан');
+    form.resetFields();
+    setCurrentStep(0);
+    setFormData({});
+    onSuccess();
+    
+  } catch (error: any) {
+    console.error('Error details:', error);
+    
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      console.error('Error body:', errorData);
+      
+      if (errorData.errors && typeof errorData.errors === 'object') {
+        const errorMessages = Object.values(errorData.errors).flat().join(', ');
+        message.error(`Ошибка валидации: ${errorMessages}`);
+      } else if (errorData.title) {
+        message.error(`Ошибка: ${errorData.title}`);
+      } else if (typeof errorData === 'string') {
+        message.error(`Ошибка: ${errorData}`);
+      } else {
+        message.error('Ошибка создания проекта');
+      }
+    } else if (error.message) {
+      message.error(`Ошибка: ${error.message}`);
+    } else {
+      message.error('Ошибка создания проекта');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const nextStep = async () => {
     try {
@@ -447,7 +357,7 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
       setFormData(prev => ({ ...prev, ...values }));
       setCurrentStep(currentStep + 1);
     } catch (error) {
-      console.log('Validation failed:', error);
+      console.error("fault validation")
     }
   };
 
@@ -477,18 +387,19 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
 
   return (
     <Modal
-      title={t('createProject.title')}
+      title="Создание нового проекта"
       open={open}
       onCancel={handleClose}
       footer={null}
       width={800}
       styles={{
-        body: { padding: '24px 0' }
+        body: { padding: '24px 0', maxHeight: '70vh', overflowY: 'auto' }
       }}
+      destroyOnHidden
     >
       <Steps
         current={currentStep}
-        items={steps.map(item => ({ title: item.title }))}
+        items={steps.map((_, index) => ({ title: '' }))}
         style={{ marginBottom: 32, padding: '0 24px' }}
       />
 
@@ -509,15 +420,15 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
           <Flex gap="small" justify="flex-end">
             {currentStep > 0 && (
               <Button onClick={prevStep} size="large">
-                {t('createProject.back')}
+                Назад
               </Button>
             )}
             <Button onClick={handleClose} size="large">
-              {t('createProject.cancel')}
+              Отмена
             </Button>
             {currentStep < steps.length - 1 && (
               <Button type="primary" onClick={nextStep} size="large">
-                {t('createProject.next')}
+                Далее
               </Button>
             )}
             {currentStep === steps.length - 1 && (
@@ -527,7 +438,7 @@ export const CreateProjectModal = ({ open, onCancel, onSuccess }: CreateProjectM
                 loading={loading}
                 size="large"
               >
-                {t('createProject.create')}
+                Создать проект
               </Button>
             )}
           </Flex>

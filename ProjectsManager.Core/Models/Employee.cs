@@ -9,12 +9,10 @@ public record Employee
     public string Lastname { get; }
     public string? Patronymic { get; }
     public string Email { get; }
-
-    private readonly HashSet<Guid> _projects = [];
-    public IReadOnlyCollection<Guid> Projects => _projects;
+    public ICollection<Guid> ProjectIds { get; init; } = [];
 
     private Employee(Guid id, string firstname, string lastname,
-        string? patronymic, string email, IEnumerable<Guid>? projects)
+        string? patronymic, string email, IEnumerable<Guid>? projectIds)
     {
         Id = id;
         Firstname = firstname;
@@ -22,12 +20,12 @@ public record Employee
         Patronymic = patronymic;
         Email = email;
 
-        if (projects != null)
-            _projects = projects as HashSet<Guid> ?? [];
+        if (projectIds != null)
+            ProjectIds = projectIds.ToHashSet();
     }
 
     public static Result<Employee> Create(Guid id,
-        string firstname, string lastname, string email, IEnumerable<Guid>? projects = null,
+        string firstname, string lastname, string email,
         string? patronymic = null)
     {
         if (string.IsNullOrEmpty(firstname))
@@ -37,7 +35,16 @@ public record Employee
         if (string.IsNullOrEmpty(email))
             return Result.Failure<Employee>("Email cannot be empty");
 
-        var employee = new Employee(id, firstname, lastname, patronymic, email, projects);
+        var employee = new Employee(id, firstname, lastname, patronymic, email, null);
         return Result.Success(employee);
     }
+
+    public static Employee Reconstruct(Guid id, string firstname, string lastname,
+        string? patronymic, string email, IEnumerable<Guid> projectIds)
+    {
+        return new Employee(id, firstname, lastname, patronymic, email, projectIds);
+    }
+
+    public void AddProject(Guid projectId) => ProjectIds.Add(projectId);
+    public void RemoveProject(Guid projectId) => ProjectIds.Remove(projectId);
 }

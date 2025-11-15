@@ -2,10 +2,10 @@ namespace ProjectsManager.DataAccess.Entities;
 
 public class ProjectEntity
 {
-    public Guid Id { get; init; }
-    public string Title { get; set; }
-    public string CustomerCompanyName { get; set; }
-    public string ContractorCompanyName { get; set; }
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string CustomerCompanyName { get; set; } = string.Empty;
+    public string ContractorCompanyName { get; set; } = string.Empty;
     public DateOnly StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public int Priority { get; set; }

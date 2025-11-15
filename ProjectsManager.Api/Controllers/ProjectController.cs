@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ProjectsManager.Core.Abstractions;
 using ProjectsManager.Core.Contracts;
-using ProjectsManager.Core.Models;
 
 namespace ProjectsManager.Api.Controllers;
 
@@ -14,7 +13,7 @@ public class ProjectController(
     [HttpGet("all")]
     public async Task<ActionResult<PageResponse<ProjectResponse>>> GetAllProjects(
         [FromQuery] PageQuery? pageQuery = null,
-        [FromQuery] ProjectQuery? query = null)
+        [FromQuery] ProjectFilterQuery? query = null)
     {
         var projects = pageQuery is null
             ? query is null
@@ -40,81 +39,77 @@ public class ProjectController(
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<(Guid, string)>> GetProjectById(Guid id)
+    public async Task<ActionResult<ProjectResponse>> GetProject(Guid id)
     {
         var project = await projectsRepository.GetById(id);
         if (project is null)
             return NotFound($"Project [{id}] not found.");
 
-        return Ok(new { id = project.Id, title = project.Title });
+        return Ok(new ProjectResponse(
+            project.Id, project.Title, project.StartDate, project.Priority,
+            project.CustomerCompanyName, project.ContractorCompanyName, project.EndDate));
     }
 
     [HttpGet("{id:guid}/employees")]
     public async Task<ActionResult<ProjectWithEmployeesResponse>> GetProjectWithEmployees(Guid id)
     {
-        var project = await projectsRepository.GetById(id);
-        if (project is null)
+        var projectWithEmployees = await projectsRepository.GetWithEmployees(id);
+        if (projectWithEmployees is null)
             return NotFound($"Project [{id}] not found.");
 
-        return Ok(new { id = project.Id, title = project.Title, employees = project.Employees });
-    }
+        var employeeResponses = projectWithEmployees.Employees.Select(e =>
+            new EmployeeResponse(e.Id, e.Firstname, e.Lastname, e.Patronymic, e.Email));
 
-    [HttpPatch("{id:guid}/employees")]
-    public async Task<ActionResult<Guid>> AssignEmployees(Guid id, [FromBody] AssignEmployeesRequest request)
-    {
-        var project = await projectsRepository.GetById(id);
-        if (project is null)
-            return NotFound($"Project [{id}] not found.");
-
-        var result = await projectsService.AssignEmployees(project,
-            request.EmployeesToAdd, request.EmployeesToRemove);
-        if (result.IsFailure)
-            return BadRequest(result.Error);
-
-        await projectsRepository.Save(project);
-        return Ok();
+        return Ok(new ProjectWithEmployeesResponse(
+            projectWithEmployees.Project.Id,
+            projectWithEmployees.Project.Title,
+            projectWithEmployees.Project.LeaderId,
+            employeeResponses));
     }
 
     [HttpPost]
     public async Task<ActionResult<Guid>> CreateProject([FromBody] CreateProjectRequest request)
     {
-        var project = Project.Create(
-            request.Title,
-            request.CustomerCompanyName,
-            request.ContractorCompanyName,
-            request.Priority,
-            request.StartDate,
-            request.EndDate);
-
-        if (project.IsFailure)
-            return BadRequest(project.Error);
-
-        var result = await projectsService.AddProject(project.Value, request.LeaderId);
+        var result = await projectsService.CreateProject(request);
         if (result.IsFailure)
             return BadRequest(result.Error);
 
-        return Created(
-            Url.Action(nameof(GetProjectById), new { id = result.Value }), project.Value.Id);
+        return CreatedAtAction(nameof(GetProject), new { id = result.Value }, result.Value);
+    }
+
+    [HttpPatch("{id:guid}/leader")]
+    public async Task<ActionResult> AssignLeader(Guid id, [FromBody] AssignLeaderRequest request)
+    {
+        var result = await projectsService.UpdateProjectLeader(id, request.LeaderId);
+        if (result.IsFailure)
+            return BadRequest(result.Error);
+
+        return Ok();
+    }
+
+    [HttpPatch("{id:guid}/employees")]
+    public async Task<ActionResult> AssignEmployees(Guid id, [FromBody] AssignEmployeesRequest request)
+    {
+        var result = await projectsService.AssignEmployees(id,
+            request.EmployeesToAdd, request.EmployeesToRemove);
+
+        if (result.IsFailure)
+            return BadRequest(result.Error);
+
+        return Ok();
     }
 
     [HttpPatch("{id:guid}")]
-    public async Task<ActionResult> PatchProject(Guid id, [FromBody] PatchProjectRequest request)
+    public async Task<ActionResult> UpdateProject(Guid id, [FromBody] PatchProjectRequest request)
     {
-        var project = await projectsRepository.GetById(id);
-        if (project is null)
+        if (await projectsRepository.GetById(id) is null)
             return NotFound($"Project [{id}] not found.");
 
-        var projectBefore = project with { };
-
-        var result = project.ApplyPatch(request);
+        var result = await projectsService.UpdateProject(id, request);
         if (result.IsFailure)
             return BadRequest(result.Error);
 
-        var saveResult = await projectsRepository.Save(project);
-        if (!saveResult)
-            return BadRequest("Cannot save changes");
-
-        return Ok(projectBefore.CreatePatchResponse(project, project.Id));
+        return Ok();
     }
 
     [HttpDelete("{id:guid}")]
@@ -123,6 +118,7 @@ public class ProjectController(
         var result = await projectsRepository.Delete(id);
         if (!result)
             return NotFound($"Project [{id}] not found.");
-        return Ok("Successfully deleted");
+
+        return Ok();
     }
 }

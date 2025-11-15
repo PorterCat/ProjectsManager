@@ -1,3 +1,4 @@
+using ProjectsManager.Core.Contracts;
 using ProjectsManager.Core.Models;
 
 namespace ProjectsManager.DataAccess.Entities;
@@ -6,7 +7,7 @@ public static class Mapping
 {
     public static Project ToDomain(this ProjectEntity entity)
     {
-        var employeeIds = entity.Employees?.Select(e => e.Id) ?? [];
+        var employeeIds = entity.Employees.Select(e => e.Id);
 
         return Project.Reconstruct(
             entity.Id,
@@ -19,43 +20,65 @@ public static class Mapping
             entity.LeaderId,
             employeeIds);
     }
-    public static void Apply(this ProjectEntity e, Project p)
+
+    public static ProjectEntity ToEntity(this Project domain)
     {
-        e.Title = p.Title;
-        e.CustomerCompanyName = p.CustomerCompanyName;
-        e.ContractorCompanyName = p.ContractorCompanyName;
-        e.Priority = p.Priority;
-        e.StartDate = p.StartDate;
-        e.EndDate = p.EndDate;
-        e.LeaderId = p.LeaderId;
+        return new ProjectEntity
+        {
+            Id = domain.Id,
+            Title = domain.Title,
+            CustomerCompanyName = domain.CustomerCompanyName,
+            ContractorCompanyName = domain.ContractorCompanyName,
+            Priority = domain.Priority,
+            StartDate = domain.StartDate,
+            EndDate = domain.EndDate,
+            LeaderId = domain.LeaderId,
+            Employees = new List<EmployeeEntity>()
+        };
     }
 
-    public static ProjectEntity ToEntity(this Project p)
-        => new()
-        {
-            Id = p.Id,
-            Title = p.Title,
-            CustomerCompanyName = p.CustomerCompanyName,
-            ContractorCompanyName = p.ContractorCompanyName,
-            Priority = p.Priority,
-            StartDate = p.StartDate,
-            EndDate = p.EndDate,
-            LeaderId = p.LeaderId
-        };
-
-    public static Employee ToDomain(this EmployeeEntity e)
+    public static void ApplyDomainChanges(this ProjectEntity entity, Project domain)
     {
-        var projectsIds = e.Projects?.Select(p => p.Id) ?? [];
-        return Employee.Create(e.Id, e.FirstName, e.LastName, e.Email, projectsIds, e.Patronymic).Value;
+        entity.Title = domain.Title;
+        entity.CustomerCompanyName = domain.CustomerCompanyName;
+        entity.ContractorCompanyName = domain.ContractorCompanyName;
+        entity.Priority = domain.Priority;
+        entity.StartDate = domain.StartDate;
+        entity.EndDate = domain.EndDate;
+        entity.LeaderId = domain.LeaderId;
     }
 
-    public static EmployeeEntity ToEntity(this Employee e)
-        => new()
+    public static Employee ToDomain(this EmployeeEntity entity)
+    {
+        var projectIds = entity.Projects.Select(p => p.Id);
+
+        return Employee.Reconstruct(
+            entity.Id,
+            entity.FirstName,
+            entity.LastName,
+            entity.Patronymic,
+            entity.Email,
+            projectIds);
+    }
+
+    public static EmployeeEntity ToEntity(this Employee domain)
+    {
+        return new EmployeeEntity
         {
-            Id = e.Id,
-            FirstName = e.Firstname,
-            LastName = e.Lastname,
-            Patronymic = e.Patronymic,
-            Email = e.Email
+            Id = domain.Id,
+            FirstName = domain.Firstname,
+            LastName = domain.Lastname,
+            Patronymic = domain.Patronymic,
+            Email = domain.Email,
+            Projects = []
         };
+    }
+
+    public static void ApplyDomainChanges(this EmployeeEntity entity, Employee domain)
+    {
+        entity.FirstName = domain.Firstname;
+        entity.LastName = domain.Lastname;
+        entity.Patronymic = domain.Patronymic;
+        entity.Email = domain.Email;
+    }
 }
