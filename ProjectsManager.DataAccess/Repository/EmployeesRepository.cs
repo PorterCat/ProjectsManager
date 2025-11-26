@@ -1,5 +1,5 @@
 using System.Globalization;
-using CSharpFunctionalExtensions;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using ProjectsManager.Core.Abstractions;
 using ProjectsManager.Core.Models;
@@ -7,20 +7,36 @@ using ProjectsManager.DataAccess.Entities;
 
 namespace ProjectsManager.DataAccess.Repository;
 
-public class EmployeesRepository(ProjectsManagerDbContext dbContext) : IEmployeesRepository
+public class EmployeesRepository(
+    ProjectsManagerDbContext dbContext,
+    IMapper mapper) : IEmployeesRepository
 {
-    public async Task<ICollection<Employee>> GetAll() =>
-        (await dbContext.Employees.AsNoTracking().ToListAsync())
-        .Select(e => e.ToDomain())
-        .ToList();
-
     public async Task<Employee?> GetById(Guid id) =>
-        (await dbContext.Employees
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id))
-        ?.ToDomain();
+        mapper.Map<Employee>(
+            await dbContext.Employees
+                .FindAsync(id));
 
-    public async Task<ICollection<Employee>> GetByFilter(string? searchText = null)
+    public async Task<Employee?> GetByIdWithProjects(Guid id) =>
+        mapper.Map<Employee>(
+            await dbContext.Employees
+                .AsNoTracking()
+                .Include(e => e.Projects)
+                .FirstOrDefaultAsync(e => e.Id == id));
+
+    public async Task<Employee?> GetByIdWithLeadingProjects(Guid id) =>
+        mapper.Map<Employee>(
+            await dbContext.Employees
+                .AsNoTracking()
+                .Include(e => e.LeadingProjects)
+                .FirstOrDefaultAsync(e => e.Id == id));
+
+    public async Task<Employee?> GetByEmail(string email) =>
+        mapper.Map<Employee>(
+            await dbContext.Employees
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Email == email));
+
+    public async Task<ICollection<Employee>> GetAll(string? searchText = null)
     {
         var query = dbContext.Employees.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(searchText))
@@ -35,51 +51,55 @@ public class EmployeesRepository(ProjectsManagerDbContext dbContext) : IEmployee
                 (p.Patronymic != null && compareInfo.IsPrefix(p.Patronymic, searchText, CompareOptions.IgnoreCase))
             ).ToList();
 
-            return filteredEmployees.Select(e => e.ToDomain()).ToList();
+            return mapper.Map<ICollection<Employee>>(filteredEmployees);
         }
 
         var result = await query.ToListAsync();
-        return result.Select(e => e.ToDomain()).ToList();
+        return mapper.Map<ICollection<Employee>>(result);
     }
 
-    public async Task<Result> Add(Employee employee)
+    public async Task Add(Employee employee)
     {
-        var existingEmployee = await dbContext.Employees
+        await dbContext.Employees.AddAsync(mapper.Map<EmployeeEntity>(employee));
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task Update(Employee employee) =>
+        await dbContext.Employees
+            .Where(e => e.Id == employee.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(e => e.FirstName, employee.FirstName)
+                .SetProperty(e => e.LastName, employee.LastName)
+                .SetProperty(e => e.Email, employee.Email)
+                .SetProperty(e => e.Patronymic, employee.Patronymic)
+            );
+
+    public async Task Delete(Guid id) => 
+        await dbContext.Employees
+            .Where(e => e.Id == id)
+            .ExecuteDeleteAsync();
+    
+    public async Task<ICollection<Project>> GetProjectsByEmployee(Guid employeeId)
+    {
+        var employeeEntity = await dbContext.Employees
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Email == employee.Email);
-
-        if (existingEmployee != null)
-            return Result.Failure($"Employee with email {employee.Email} already exists"); // Not repo's responsibility, TODO: move to service 
-
-        await dbContext.Employees.AddAsync(employee.ToEntity());
-        await dbContext.SaveChangesAsync();
-        return Result.Success();
-    }
-
-    public async Task Update(Employee employee)
-    {
-        var entity = await dbContext.Employees
-            .FirstOrDefaultAsync(e => e.Id == employee.Id);
-
-        if (entity == null) return;
-
-        entity.ApplyDomainChanges(employee);
-        await dbContext.SaveChangesAsync();
-    }
-
-    public async Task<bool> Delete(Guid id)
-    {
-        var entity = await dbContext.Employees
             .Include(e => e.Projects)
-            .FirstOrDefaultAsync(e => e.Id == id);
+            .FirstOrDefaultAsync(e => e.Id == employeeId);
 
-        if (entity is null)
-            return false;
+        return employeeEntity?.Projects
+            .Select(mapper.Map<Project>)
+            .ToList() ?? [];
+    }
 
-        entity.Projects.Clear();
+    public async Task<ICollection<Project>> GetLeadingProjectsByEmployee(Guid employeeId)
+    {
+        var employeeEntity = await dbContext.Employees
+            .AsNoTracking()
+            .Include(e => e.LeadingProjects)
+            .FirstOrDefaultAsync(e => e.Id == employeeId);
 
-        dbContext.Employees.Remove(entity);
-        await dbContext.SaveChangesAsync();
-        return true;
+        return employeeEntity?.LeadingProjects
+            .Select(mapper.Map<Project>)
+            .ToList() ?? [];
     }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using CSharpFunctionalExtensions;
 
 namespace ProjectsManager.Core.Models;
@@ -5,46 +6,51 @@ namespace ProjectsManager.Core.Models;
 public record Employee
 {
     public Guid Id { get; }
-    public string Firstname { get; }
-    public string Lastname { get; }
-    public string? Patronymic { get; }
+    public string FirstName { get; init; }
+    public string LastName { get; init; }
     public string Email { get; }
-    public ICollection<Guid> ProjectIds { get; init; } = [];
+    public string? Patronymic { get; init; }
 
-    private Employee(Guid id, string firstname, string lastname,
-        string? patronymic, string email, IEnumerable<Guid>? projectIds)
+    private Employee(Guid id, string firstName, string lastName,
+        string email, string? patronymic)
     {
         Id = id;
-        Firstname = firstname;
-        Lastname = lastname;
-        Patronymic = patronymic;
+        FirstName = firstName;
+        LastName = lastName;
         Email = email;
-
-        if (projectIds != null)
-            ProjectIds = projectIds.ToHashSet();
+        Patronymic = patronymic;
     }
-
-    public static Result<Employee> Create(Guid id,
-        string firstname, string lastname, string email,
+    
+    public static Result<Employee> Create(
+        Guid id,
+        string firstName,
+        string lastName,
+        string email,
         string? patronymic = null)
     {
-        if (string.IsNullOrEmpty(firstname))
-            return Result.Failure<Employee>("Firstname cannot be empty");
-        if (string.IsNullOrEmpty(lastname))
-            return Result.Failure<Employee>("Lastname cannot be empty");
-        if (string.IsNullOrEmpty(email))
-            return Result.Failure<Employee>("Email cannot be empty");
-
-        var employee = new Employee(id, firstname, lastname, patronymic, email, null);
-        return Result.Success(employee);
+        var validationResult = Validate(firstName, lastName, email);
+        return validationResult.IsFailure 
+            ? Result.Failure<Employee>(validationResult.Error) 
+            : new Employee(id, firstName, lastName, email, patronymic);
     }
 
-    public static Employee Reconstruct(Guid id, string firstname, string lastname,
-        string? patronymic, string email, IEnumerable<Guid> projectIds)
+    public static Result Validate(string firstName, string lastName, string email)
     {
-        return new Employee(id, firstname, lastname, patronymic, email, projectIds);
-    }
+        if (string.IsNullOrWhiteSpace(firstName))
+            return Result.Failure($"{nameof(firstName)} cannot be empty");
+            
+        if (string.IsNullOrWhiteSpace(lastName))
+            return Result.Failure($"{nameof(lastName)} cannot be empty");
 
-    public void AddProject(Guid projectId) => ProjectIds.Add(projectId);
-    public void RemoveProject(Guid projectId) => ProjectIds.Remove(projectId);
+        if (string.IsNullOrWhiteSpace(email))
+            return Result.Failure($"{nameof(email)} cannot be empty");
+
+        if (!new EmailAddressAttribute().IsValid(email))
+            return Result.Failure($"{nameof(email)} is invalid");
+
+        return Result.Success();
+    }
+    
+    public static Result Validate(Employee employee) =>
+        Validate(employee.FirstName, employee.LastName, employee.Email);
 }

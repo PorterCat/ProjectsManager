@@ -6,9 +6,11 @@ namespace ProjectsManager.Core.Abstractions;
 public interface IEmployeesRepository
 {
     Task<Employee?> GetById(Guid id);
-    Task<ICollection<Employee>> GetByFilter(string? searchText = null);
-    Task<ICollection<Employee>> GetAll();
-    Task<Result> Add(Employee employee);
+    Task<Employee?> GetByEmail(string email);
+    Task<ICollection<Employee>> GetAll(string? searchText = null);
+    Task Add(Employee employee);
     Task Update(Employee employee);
-    Task<bool> Delete(Guid id);
+    Task Delete(Guid id);
+    Task<ICollection<Project>> GetProjectsByEmployee(Guid employeeId);
+    Task<ICollection<Project>> GetLeadingProjectsByEmployee(Guid employeeId);
 }
