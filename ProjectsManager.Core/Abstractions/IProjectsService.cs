@@ -6,12 +6,10 @@ namespace ProjectsManager.Core.Abstractions;
 
 public interface IProjectsService
 {
-    // Task<Result<Guid>> AddProject(Project project, Guid? leaderId);
-    //Task<Result> AssignEmployees(Project project, IEnumerable<Guid> employeeIdsToAdd, IEnumerable<Guid> employeesIdsToRemove);
-
-    Task<Result<Guid>> CreateProject(CreateProjectRequest request);
-    Task<Result> AssignEmployees(Guid projectId,
-        IEnumerable<Guid> employeeIdsToAdd, IEnumerable<Guid> employeeIdsToRemove);
-    Task<Result> UpdateProject(Guid projectId, PatchProjectRequest request);
-    Task<Result> UpdateProjectLeader(Guid projectId, Guid leaderId);
+    Task<Project?> GetProjectById(Guid id);
+    Task<ICollection<Project>> GetAllProjects(PageQuery? pageQuery, ProjectFilterQuery? query);
+    Task<int> GetCount();
+    Task<Result> CreateProject(Project project);
+    Task<Result<PatchResponse<Project>>> UpdateProject(Project project, UpdateProjectRequest request);
+    Task<Result> DeleteProject(Project project);
 }

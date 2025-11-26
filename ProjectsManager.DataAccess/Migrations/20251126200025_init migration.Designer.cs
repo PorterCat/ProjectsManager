@@ -11,7 +11,7 @@ using ProjectsManager.DataAccess;
 namespace ProjectsManager.DataAccess.Migrations
 {
     [DbContext(typeof(ProjectsManagerDbContext))]
-    [Migration("20251110212645_init migration")]
+    [Migration("20251126200025_init migration")]
     partial class initmigration
     {
         /// <inheritdoc />
@@ -57,6 +57,9 @@ namespace ProjectsManager.DataAccess.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Employee", (string)null);
                 });

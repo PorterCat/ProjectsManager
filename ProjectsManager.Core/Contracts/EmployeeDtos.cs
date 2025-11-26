@@ -2,21 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ProjectsManager.Core.Contracts;
 
-public record EmployeeResponse(
-    Guid Id,
-    string Firstname,
-    string Lastname,
-    string? Patronymic,
-    string Email);
-
 public record CreateEmployeeRequest(
-    [Required] string Firstname,
-    [Required] string Lastname,
+    [Required] string FirstName,
+    [Required] string LastName,
     string? Patronymic,
     [EmailAddress] string Email);
 
 public record UpdateEmployeeRequest(
     string? Firstname,
     string? Lastname,
-    string? Patronymic,
-    string? Email);
+    string? Patronymic);

@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using ProjectsManager.Core.Abstractions;
 using ProjectsManager.Core.Contracts;
@@ -6,103 +7,11 @@ using ProjectsManager.DataAccess.Entities;
 
 namespace ProjectsManager.DataAccess.Repository;
 
-public class ProjectsRepository(ProjectsManagerDbContext dbContext) : IProjectsRepository
+public class ProjectsRepository(
+    ProjectsManagerDbContext dbContext,
+    IMapper mapper) : IProjectsRepository
 {
-    public async Task<Project?> GetById(Guid id) =>
-         (await dbContext.Projects
-             .AsNoTracking()
-             .Include(p => p.Employees)
-             .FirstOrDefaultAsync(p => p.Id == id))
-         ?.ToDomain();
-
-    public async Task<ProjectWithEmployees?> GetWithEmployees(Guid id)
-    {
-        var entity = await dbContext.Projects
-            .AsNoTracking()
-            .Include(p => p.Employees)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (entity == null) return null;
-
-        var project = entity.ToDomain();
-        var employees = entity.Employees.Select(e => e.ToDomain());
-
-        return new ProjectWithEmployees(project, employees);
-    }
-
-    public async Task<ICollection<Project>> GetAll() =>
-        (await dbContext.Projects
-            .AsNoTracking()
-            .Include(p => p.Employees)
-            .ToListAsync())
-        .Select(e => e.ToDomain())
-        .ToList();
-
-    public async Task<int> GetCount()
-        => await dbContext.Projects.CountAsync();
-
-    public async Task Add(Project project)
-    {
-        var entity = project.ToEntity();
-
-        if (project.EmployeeIds.Count != 0)
-        {
-            var employees = await dbContext.Employees
-                .Where(e => project.EmployeeIds.Contains(e.Id))
-                .ToListAsync();
-
-            entity.Employees.AddRange(employees);
-        }
-
-        await dbContext.Projects.AddAsync(entity);
-        await dbContext.SaveChangesAsync();
-    }
-
-    public async Task Update(Project project)
-    {
-        var entity = await dbContext.Projects
-            .Include(p => p.Employees)
-            .FirstOrDefaultAsync(p => p.Id == project.Id);
-
-        if (entity == null) return;
-        entity.ApplyDomainChanges(project);
-
-        var currentEmployeeIds = entity.Employees.Select(e => e.Id).ToList();
-        var newEmployeeIds = project.EmployeeIds.ToList();
-
-        var toRemove = entity.Employees
-            .Where(e => !newEmployeeIds.Contains(e.Id))
-            .ToList();
-        foreach (var employee in toRemove)
-            entity.Employees.Remove(employee);
-
-        var toAddIds = newEmployeeIds.Except(currentEmployeeIds);
-        var toAdd = await dbContext.Employees
-            .Where(e => toAddIds.Contains(e.Id))
-            .ToListAsync();
-        foreach (var employee in toAdd)
-            entity.Employees.Add(employee);
-
-        await dbContext.SaveChangesAsync();
-    }
-
-    public async Task<bool> Delete(Guid id)
-    {
-        var entity = await dbContext.Projects
-            .Include(p => p.Employees)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (entity is null)
-            return false;
-
-        entity.Employees.Clear();
-
-        dbContext.Projects.Remove(entity);
-        await dbContext.SaveChangesAsync();
-        return true;
-    }
-
-    public async Task<ICollection<Project>> GetByFilter(PageQuery? page = null, ProjectFilterQuery? projectQuery = null)
+    public async Task<ICollection<Project>> GetAll(PageQuery? page = null, ProjectFilterQuery? projectQuery = null)
     {
         IQueryable<ProjectEntity> query = dbContext.Projects.AsNoTracking()
             .Include(p => p.Employees);
@@ -137,8 +46,74 @@ public class ProjectsRepository(ProjectsManagerDbContext dbContext) : IProjectsR
             query = query.Skip((page.PageNum - 1) * page.PageSize).Take(page.PageSize);
 
         var result = await query.ToListAsync();
-        return result.Select(e => e.ToDomain()).ToList();
+        return mapper.Map<ICollection<Project>>(result);
     }
+    
+    public async Task<Project?> GetById(Guid id) =>
+        mapper.Map<Project>
+        (await dbContext.Projects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id));
+    
+    public async Task<int> GetCount()
+        => await dbContext.Projects.CountAsync();
+
+    public async Task Add(Project project)
+    {
+        await dbContext.Projects.AddAsync(mapper.Map<ProjectEntity>(project));
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task Update(Project project) =>
+        await dbContext.Projects
+            .Where(p => p.Id == project.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.Title, project.Title)
+                .SetProperty(p => p.CustomerCompanyName, project.CustomerCompanyName)
+                .SetProperty(p => p.ContractorCompanyName, project.ContractorCompanyName)
+                .SetProperty(p => p.Priority, project.Priority)
+                .SetProperty(p => p.StartDate, project.StartDate)
+                .SetProperty(p => p.EndDate, project.EndDate)
+            );
+
+    public async Task Delete(Guid id) =>
+        await dbContext.Projects
+            .Where(e => e.Id == id)
+            .ExecuteDeleteAsync();
+
+    public async Task<ICollection<Employee>> GetEmployeesByProject(Guid projectId)
+    {
+        var projectEntity = await dbContext.Projects
+            .AsNoTracking()
+            .Include(p => p.Employees)
+            .FirstOrDefaultAsync(p => p.Id == projectId);
+
+        return projectEntity?.Employees
+            .Select(mapper.Map<Employee>)
+            .ToList() ?? [];
+    }
+
+    public async Task<int> UpdateProjectEmployees(Guid projectId, IEnumerable<Guid> employeeIds)
+    {
+        var projectEntity = await dbContext.Projects
+            .Include(p => p.Employees)
+            .FirstOrDefaultAsync(p => p.Id == projectId);
+        
+        projectEntity?.Employees.Clear();
+        var employeeEntities = await dbContext.Employees
+            .Where(e => employeeIds.Contains(e.Id))
+            .ToListAsync();
+        
+        projectEntity?.Employees.AddRange(employeeEntities);
+        await dbContext.SaveChangesAsync();
+        return employeeEntities.Count;
+    }
+
+    public async Task UpdateProjectLeader(Guid projectId, Guid? leaderId) =>
+        await dbContext.Projects
+            .Where(p => p.Id == projectId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.LeaderId, leaderId));
 
     private IQueryable<ProjectEntity> ApplySorting(IQueryable<ProjectEntity> query, ProjectFilterQuery projectFilterQuery)
     {

@@ -74,6 +74,12 @@ namespace ProjectsManager.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Employee_Email",
+                table: "Employee",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_EmployeeEntityProjectEntity_ProjectsId",
                 table: "EmployeeEntityProjectEntity",
                 column: "ProjectsId");
