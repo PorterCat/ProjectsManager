@@ -7,6 +7,16 @@ public record ProjectWithEmployees(
     Project Project, 
     IEnumerable<Employee> Employees);
 
+public record ProjectResponse(
+    Guid Id,
+    string Title,
+    DateOnly StartDate,
+    DateOnly? EndDate,
+    int Priority,
+    string CustomerCompanyName,
+    string ContractorCompanyName,
+    Guid? LeaderId);
+
 public record CreateProjectRequest(
     [Required] string Title,
     DateOnly StartDate,
@@ -22,3 +32,6 @@ public record UpdateProjectRequest(
     string? ContractorCompanyName, int? Priority,
     DateOnly? StartDate, DateOnly? EndDate,
     bool? RemoveLeader, Guid? LeaderId);
+    
+public record AssignLeaderRequest(
+    Guid? LeaderId = null);

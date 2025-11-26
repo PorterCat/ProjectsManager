@@ -15,21 +15,6 @@ public class EmployeesRepository(
         mapper.Map<Employee>(
             await dbContext.Employees
                 .FindAsync(id));
-
-    public async Task<Employee?> GetByIdWithProjects(Guid id) =>
-        mapper.Map<Employee>(
-            await dbContext.Employees
-                .AsNoTracking()
-                .Include(e => e.Projects)
-                .FirstOrDefaultAsync(e => e.Id == id));
-
-    public async Task<Employee?> GetByIdWithLeadingProjects(Guid id) =>
-        mapper.Map<Employee>(
-            await dbContext.Employees
-                .AsNoTracking()
-                .Include(e => e.LeadingProjects)
-                .FirstOrDefaultAsync(e => e.Id == id));
-
     public async Task<Employee?> GetByEmail(string email) =>
         mapper.Map<Employee>(
             await dbContext.Employees

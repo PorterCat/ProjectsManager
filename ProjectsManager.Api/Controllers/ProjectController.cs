@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectsManager.Core.Abstractions;
@@ -11,7 +12,8 @@ namespace ProjectsManager.Api.Controllers;
 [Authorize(Roles = "Manager,Director")]
 public class ProjectController(
     IProjectsService projectsService, 
-    IAssignmentService assignmentService) : ControllerBase
+    IAssignmentService assignmentService,
+    IMapper mapper) : ControllerBase
 {
     [HttpGet("all")]
     public async Task<ActionResult<PageResponse<Project>>> GetAllProjects(
@@ -31,13 +33,27 @@ public class ProjectController(
         ));
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Project>> GetProject(Guid id)
+    [HttpGet("{projectId:guid}")]
+    public async Task<ActionResult<Project>> GetProject(Guid projectId)
     {
-        var project = await projectsService.GetProjectById(id);
+        var project = await projectsService.GetProjectById(projectId);
         if (project is null)
-            return NotFound($"Project [{id}] not found.");
-        return Ok(project);
+            return NotFound($"Project [{projectId}] not found.");
+
+        var leader = await assignmentService.GetProjectLeader(projectId);
+        var response = new ProjectResponse
+        (
+            Id: project.Id,
+            Title: project.Title,
+            CustomerCompanyName: project.CustomerCompanyName,
+            ContractorCompanyName: project.ContractorCompanyName,
+            Priority: project.Priority,
+            StartDate: project.StartDate,
+            EndDate: project.EndDate,
+            LeaderId: leader?.Id
+        );
+    
+        return Ok(response);
     }
     
     [HttpPost]
@@ -69,12 +85,12 @@ public class ProjectController(
         return Created(Url.Action(nameof(GetProject), new { id = project.Value.Id }), project.Value.Id);
     }
 
-    [HttpPatch("{id:guid}")]
-    public async Task<ActionResult> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request)
+    [HttpPatch("{projectId:guid}")]
+    public async Task<ActionResult> UpdateProject(Guid projectId, [FromBody] UpdateProjectRequest request)
     {
-        var project = await projectsService.GetProjectById(id);
+        var project = await projectsService.GetProjectById(projectId);
         if (project is null)
-            return NotFound($"Project [{id}] not found.");
+            return NotFound($"Project [{projectId}] not found.");
         
         var result = await projectsService.UpdateProject(project, request);
         if (result.IsFailure)
@@ -83,18 +99,18 @@ public class ProjectController(
         return Ok(result.Value);
     }
     
-    [HttpDelete("{id:guid}")]
-    public async Task<ActionResult> DeleteProject(Guid id)
+    [HttpDelete("{projectId:guid}")]
+    public async Task<ActionResult> DeleteProject(Guid projectId)
     {
-        var employee = await projectsService.GetProjectById(id);
+        var employee = await projectsService.GetProjectById(projectId);
         if (employee is null)
-            return NotFound($"Project [{id}] not found.");
+            return NotFound($"Project [{projectId}] not found.");
         
         var result = await projectsService.DeleteProject(employee);
         if (result.IsFailure)
             return BadRequest(result.Error);
         
-        return Ok($"Employee {id} was deleted.");
+        return Ok($"Employee {projectId} was deleted.");
     }
     
     [HttpGet("{projectId:guid}/employees")]
@@ -104,7 +120,7 @@ public class ProjectController(
         if (project is null)
             return NotFound($"Project [{projectId}] not found.");
 
-        var employees = await assignmentService.GetProjectEmployees(projectId);
+        var employees = await assignmentService.GetEmployeesByProject(projectId);
         if(employees.Count == 0)
             return NoContent();
         
@@ -112,17 +128,17 @@ public class ProjectController(
     }
 
     [HttpPost("{projectId:guid}/leader")]
-    public async Task<ActionResult> AssignLeader(Guid projectId, [FromBody] Guid? leaderId = null)
+    public async Task<ActionResult> AssignLeader(Guid projectId, [FromBody] AssignLeaderRequest request)
     {
         var project = await projectsService.GetProjectById(projectId);
         if (project is null)
             return NotFound($"Project [{projectId}] not found.");
         
-        var result = await assignmentService.AssignProjectLeader(projectId, leaderId);
+        var result = await assignmentService.AssignProjectLeader(projectId, request.LeaderId);
         if (result.IsFailure)
             return BadRequest(result.Error);
     
-        return Ok($"Employee [{leaderId}] is now leader of Project [{projectId}]");
+        return Ok($"Employee [{request.LeaderId}] is now leader of Project [{projectId}]");
     }
 
     [HttpPost("{projectId:guid}/employees")]

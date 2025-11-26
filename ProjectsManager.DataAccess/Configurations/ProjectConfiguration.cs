@@ -23,7 +23,8 @@ public class ProjectConfiguration : IEntityTypeConfiguration<ProjectEntity>
         builder.HasOne(p => p.Leader)
                .WithMany(l => l.LeadingProjects)
                .HasForeignKey(p => p.LeaderId)
-               .IsRequired(false);
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.SetNull);
 
         builder.Property(p => p.StartDate)
                .HasColumnType("date");

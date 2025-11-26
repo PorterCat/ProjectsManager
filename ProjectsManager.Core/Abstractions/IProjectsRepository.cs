@@ -13,6 +13,7 @@ public interface IProjectsRepository
     Task Delete(Guid id);
     
     Task<ICollection<Employee>> GetEmployeesByProject(Guid projectId);
+    Task<Employee?> GetProjectLeader(Guid projectId);
     Task<int> UpdateProjectEmployees(Guid projectId, IEnumerable<Guid> employeeIds);
     Task UpdateProjectLeader(Guid projectId, Guid? leaderId);
 }

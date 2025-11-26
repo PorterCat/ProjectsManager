@@ -40,12 +40,15 @@ public class AssignmentService(
         return Result.Success();
     }
 
-    public async Task<ICollection<Employee>> GetProjectEmployees(Guid projectId) =>
+    public async Task<ICollection<Employee>> GetEmployeesByProject(Guid projectId) =>
         await projectsRepository.GetEmployeesByProject(projectId);
 
-    public async Task<ICollection<Project>> GetEmployeeProjects(Guid employeeId) =>
+    public async Task<ICollection<Project>> GetProjectsByEmployee(Guid employeeId) =>
         await employeesRepository.GetProjectsByEmployee(employeeId);
 
-    public async Task<ICollection<Project>> GetEmployeeLeadingProjects(Guid employeeId) =>
+    public async Task<ICollection<Project>> GetLeadingProjectsByEmployee(Guid employeeId) =>
         await employeesRepository.GetLeadingProjectsByEmployee(employeeId);
+
+    public async Task<Employee?> GetProjectLeader(Guid projectId) =>
+        await projectsRepository.GetProjectLeader(projectId);
 }

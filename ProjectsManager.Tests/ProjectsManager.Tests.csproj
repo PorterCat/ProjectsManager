@@ -24,6 +24,7 @@
     <ItemGroup>
       <ProjectReference Include="..\ProjectsManager.Business\ProjectsManager.Business.csproj" />
       <ProjectReference Include="..\ProjectsManager.Core\ProjectsManager.Core.csproj" />
+      <ProjectReference Include="..\ProjectsManager.DataAccess\ProjectsManager.DataAccess.csproj" />
     </ItemGroup>
 
 </Project>

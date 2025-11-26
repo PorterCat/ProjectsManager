@@ -92,7 +92,7 @@ public class EmployeeController(
         if (employee is null)
             return NotFound($"Employee [{employeeId}] not found.");
 
-        var projects = assignmentService.GetEmployeeProjects(employeeId);
+        var projects = assignmentService.GetProjectsByEmployee(employeeId);
         return Ok(projects);
     }
 }

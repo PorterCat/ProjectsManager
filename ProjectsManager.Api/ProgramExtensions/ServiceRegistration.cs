@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ProjectsManager.Business;
 using ProjectsManager.Business.Auth;
 using ProjectsManager.Core.Abstractions;
+using ProjectsManager.Core.Mapping;
 using ProjectsManager.DataAccess;
 using ProjectsManager.DataAccess.Entities;
 using ProjectsManager.DataAccess.Repository;
@@ -28,6 +29,7 @@ public static class ServiceRegistration
         services.AddAutoMapper(options =>
         {
             options.AddProfile<DataMappingProfile>();
+            options.AddProfile<ProjectMappingProfile>();
         });
         
         return services;

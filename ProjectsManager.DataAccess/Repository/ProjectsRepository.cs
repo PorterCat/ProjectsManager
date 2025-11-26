@@ -55,8 +55,8 @@ public class ProjectsRepository(
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id));
     
-    public async Task<int> GetCount()
-        => await dbContext.Projects.CountAsync();
+    public async Task<int> GetCount() => 
+        await dbContext.Projects.CountAsync();
 
     public async Task Add(Project project)
     {
@@ -91,6 +91,15 @@ public class ProjectsRepository(
         return projectEntity?.Employees
             .Select(mapper.Map<Employee>)
             .ToList() ?? [];
+    }
+
+    public async Task<Employee?> GetProjectLeader(Guid projectId)
+    {
+        var projectEntity = await dbContext.Projects
+            .Include(p => p.Leader)
+            .FirstOrDefaultAsync(p => p.Id == projectId);
+    
+        return projectEntity is null ? null : mapper.Map<Employee?>(projectEntity.Leader);
     }
 
     public async Task<int> UpdateProjectEmployees(Guid projectId, IEnumerable<Guid> employeeIds)

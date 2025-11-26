@@ -7,7 +7,8 @@ public interface IAssignmentService
 {
     Task<Result<int>> AssignEmployeesToProject(Guid projectId, IEnumerable<Guid> employeeId);
     Task<Result> AssignProjectLeader(Guid projectId, Guid? leaderId);
-    Task<ICollection<Employee>> GetProjectEmployees(Guid projectId);
-    Task<ICollection<Project>> GetEmployeeProjects(Guid employeeId);
-    Task<ICollection<Project>> GetEmployeeLeadingProjects(Guid employeeId);
+    Task<ICollection<Employee>> GetEmployeesByProject(Guid projectId);
+    Task<ICollection<Project>> GetProjectsByEmployee(Guid employeeId);
+    Task<ICollection<Project>> GetLeadingProjectsByEmployee(Guid employeeId);
+    Task<Employee?> GetProjectLeader(Guid projectId);
 }
