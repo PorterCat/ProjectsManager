@@ -30,8 +30,7 @@ public record CreateProjectRequest(
 public record UpdateProjectRequest(
     string? Title, string? CustomerCompanyName,
     string? ContractorCompanyName, int? Priority,
-    DateOnly? StartDate, DateOnly? EndDate,
-    bool? RemoveLeader, Guid? LeaderId);
+    DateOnly? StartDate, DateOnly? EndDate);
     
 public record AssignLeaderRequest(
     Guid? LeaderId = null);

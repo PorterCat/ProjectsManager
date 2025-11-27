@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectsManager.Core.Abstractions;
@@ -8,7 +9,7 @@ namespace ProjectsManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager,Director")]
+[Authorize]
 public class EmployeeController(
     IEmployeesService employeesService,
     IAssignmentService assignmentService) : ControllerBase
@@ -23,6 +24,7 @@ public class EmployeeController(
     }
 
     [HttpGet("{employeeId:guid}")]
+    [Authorize(Roles = "Manager,Director")]
     public async Task<ActionResult<Employee>> GetEmployee(Guid employeeId)
     {
         var employee = await employeesService.GetEmployeeById(employeeId);
@@ -86,13 +88,21 @@ public class EmployeeController(
     }
 
     [HttpGet("{employeeId:guid}/projects")]
+    [Authorize(Roles = "Employee,Manager,Director")]
     public async Task<ActionResult<IEnumerable<Project>>> GetProjects(Guid employeeId)
     {
+        var (currentUserId, currentUserRole) = CurrentUserHelper.GetCurrentUser(User);
+        if (currentUserId is null)
+            return Unauthorized();
+        
+        if (currentUserRole is EmployeeRole.Employee && currentUserId != employeeId)
+            return StatusCode((int)HttpStatusCode.Forbidden, "You can only view your own projects");
+        
         var employee = await employeesService.GetEmployeeById(employeeId);
         if (employee is null)
             return NotFound($"Employee [{employeeId}] not found.");
 
-        var projects = assignmentService.GetProjectsByEmployee(employeeId);
+        var projects = await assignmentService.GetProjectsByEmployee(employeeId);
         return Ok(projects);
     }
 }

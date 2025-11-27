@@ -1,4 +1,4 @@
-using AutoMapper;
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectsManager.Core.Abstractions;
@@ -9,11 +9,10 @@ namespace ProjectsManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager,Director")]
+[Authorize]
 public class ProjectController(
-    IProjectsService projectsService, 
-    IAssignmentService assignmentService,
-    IMapper mapper) : ControllerBase
+    IProjectsService projectsService,
+    IAssignmentService assignmentService) : ControllerBase
 {
     [HttpGet("all")]
     public async Task<ActionResult<PageResponse<Project>>> GetAllProjects(
@@ -36,11 +35,28 @@ public class ProjectController(
     [HttpGet("{projectId:guid}")]
     public async Task<ActionResult<Project>> GetProject(Guid projectId)
     {
+        var (currentUserId, currentUserRole) = CurrentUserHelper.GetCurrentUser(User);
+        if (currentUserId == null)
+            return Unauthorized();
+        
         var project = await projectsService.GetProjectById(projectId);
         if (project is null)
             return NotFound($"Project [{projectId}] not found.");
 
+        if (currentUserRole is EmployeeRole.Employee)
+        {
+            var employeeProjects = await assignmentService.GetProjectsByEmployee(currentUserId.Value);
+            if (employeeProjects.All(p => p.Id != projectId))
+                return StatusCode((int)HttpStatusCode.Forbidden, "You can only view your own projects.");
+        }
+        
         var leader = await assignmentService.GetProjectLeader(projectId);
+        if (currentUserRole is EmployeeRole.Manager)
+        {
+            if (leader is null || leader.Id != currentUserId)
+                return StatusCode((int)HttpStatusCode.Forbidden, "You can only view your own projects.");
+        }
+        
         var response = new ProjectResponse
         (
             Id: project.Id,
@@ -57,6 +73,7 @@ public class ProjectController(
     }
     
     [HttpPost]
+    [Authorize(Roles = "Director")]
     public async Task<ActionResult<Guid>> CreateProject([FromBody] CreateProjectRequest request)
     {
         var project = Project.Create(
@@ -86,6 +103,7 @@ public class ProjectController(
     }
 
     [HttpPatch("{projectId:guid}")]
+    [Authorize(Roles = "Director")]
     public async Task<ActionResult> UpdateProject(Guid projectId, [FromBody] UpdateProjectRequest request)
     {
         var project = await projectsService.GetProjectById(projectId);
@@ -100,6 +118,7 @@ public class ProjectController(
     }
     
     [HttpDelete("{projectId:guid}")]
+    [Authorize(Roles = "Director")]
     public async Task<ActionResult> DeleteProject(Guid projectId)
     {
         var employee = await projectsService.GetProjectById(projectId);
@@ -128,6 +147,7 @@ public class ProjectController(
     }
 
     [HttpPost("{projectId:guid}/leader")]
+    [Authorize(Roles = "Director")]
     public async Task<ActionResult> AssignLeader(Guid projectId, [FromBody] AssignLeaderRequest request)
     {
         var project = await projectsService.GetProjectById(projectId);
@@ -138,20 +158,35 @@ public class ProjectController(
         if (result.IsFailure)
             return BadRequest(result.Error);
     
-        return Ok($"Employee [{request.LeaderId}] is now leader of Project [{projectId}]");
+        if(request.LeaderId is null)
+            return Ok($"Project [{projectId}] now without leader.");
+        
+        return Ok($"Employee [{request.LeaderId}] is now leader of Project [{projectId}].");
     }
 
     [HttpPost("{projectId:guid}/employees")]
+    [Authorize(Roles = "Manager,Director")]
     public async Task<ActionResult> AssignEmployees(Guid projectId, [FromBody] IEnumerable<Guid> employeeIds)
     {
+        var (currentUserId, currentUserRole) = CurrentUserHelper.GetCurrentUser(User);
+        if (currentUserId == null)
+            return Unauthorized();
+        
         var project = await projectsService.GetProjectById(projectId);
         if (project is null)
             return NotFound($"Project [{projectId}] not found.");
     
+        if (currentUserRole is EmployeeRole.Manager)
+        {
+            var leader = await assignmentService.GetProjectLeader(projectId);
+            if (leader?.Id != currentUserId)
+                return StatusCode((int)HttpStatusCode.Forbidden, "You can only manage projects where you are leader.");
+        }
+        
         var result = await assignmentService.AssignEmployeesToProject(projectId, employeeIds);
         if (result.IsFailure)
             return BadRequest(result.Error);
         
-        return Ok($"Project [{projectId}]. Employees: {result.Value}");
+        return Ok($"Project [{projectId}]. Employees: {result.Value}.");
     }
 }
